@@ -14,6 +14,10 @@ struct ContentView: View {
     @State private var errorTitle = ""
     @State private var errorMessage = ""
     @State private var showingError = false
+    @State private var points: Int = 0
+    @State private var turns = 0
+    @State private var nextButtonTitle = "Next word"
+    private let maxTurns = 10
     var body: some View {
         NavigationView {
             VStack {
@@ -25,19 +29,50 @@ struct ContentView: View {
                     Image(systemName: "\($0.count).circle")
                     Text($0.uppercased())
                 }
+                Text("Your points")
+                    .foregroundColor(.orange)
+                Text("\(points)")
+                    .font(.largeTitle)
+                    .fontWeight(.black)
+                    .foregroundColor(.orange)
             }
             .navigationBarTitle(rootWord)
+            .navigationBarItems(trailing: Button(action: startGame, label: {
+                Text(nextButtonTitle)
+            })
+            .padding()
+            .background(Color.orange)
+            .foregroundColor(.white)
+            .clipShape(Capsule())
+            )
             .onAppear(perform: startGame)
             .alert(isPresented: $showingError, content: {
                 Alert(title: Text(errorTitle), message: Text(errorMessage), dismissButton: .default(Text("OK")))
             })
         }
     }
+    func reset() {
+        turns = 0
+        points = 0
+    }
     func startGame() {
+        guard turns != maxTurns else {
+            errorTitle = "Game over"
+            errorMessage = "You have scored \(points) points!"
+            nextButtonTitle = "Next word"
+            showingError = true
+            reset()
+            return
+        }
         if let startWordsURL = Bundle.main.url(forResource: "start", withExtension: "txt") {
             if let startWords = try? String.init(contentsOf: startWordsURL) {
                 let allWords = startWords.components(separatedBy: "\n")
                 rootWord = (allWords.randomElement() ?? "silkworm").uppercased()
+                usedWords.removeAll()
+                turns += 1
+                if turns == maxTurns {
+                    nextButtonTitle = "End game"
+                }
                 return
             }
             fatalError("Couldn't load text file from bundle!")
@@ -83,7 +118,7 @@ struct ContentView: View {
             wordError(title: "Word not possible", message: "You can't just make them up! You know.")
             return
         }
-        
+        addToPoints(word: newWord)
         usedWords.insert(answer, at: 0)
         newWord = ""
     }
@@ -92,6 +127,9 @@ struct ContentView: View {
         errorMessage = message
         newWord = ""
         showingError = true
+    }
+    func addToPoints(word: String) {
+        points += word.count
     }
 }
 
